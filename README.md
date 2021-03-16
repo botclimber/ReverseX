@@ -2,8 +2,7 @@
 
 Educational project
 
-## Some out loud thoughts
-### Environment:
+## Environment:
 - Simulation
 - State vector
 - Reward System
@@ -15,5 +14,5 @@ can either way be graphic or not.
 
 
 
-### Agent:
+## Agent:
 - PARL
