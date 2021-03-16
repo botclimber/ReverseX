@@ -2,7 +2,7 @@
 
 Educational project
 
-## some out loud thoughts
+## Some out loud thoughts
 ### Environment:
 - Simulation
 - State vector
