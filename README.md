@@ -2,6 +2,21 @@
 
 Educational project
 
+## Keywords:
+- Model-based | Model-Free
+- Environment
+- Agent
+- Action
+- State
+- Reward
+- Policy
+- Value Function
+- Function approximator
+- ?Markov decision process (MDV)
+- ?Dynamic programming (DP)
+- MODEL
+
+
 ## Environment:
 - Simulation
 - State vector
@@ -15,4 +30,9 @@ can either way be graphic or not.
 
 
 ## Agent:
+
 - PARL
+	- in sight, chinese framework
+- PPO
+	- Proximal Policy Optimizaiton
+
