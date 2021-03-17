@@ -25,7 +25,7 @@ Educational project
 
 First make the environment example, Then add the reward and state vector system.
 
-can either way be graphic or not.
+can either be graphic or not.
 
 
 
