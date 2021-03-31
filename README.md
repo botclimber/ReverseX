@@ -24,9 +24,7 @@ Educational project
 - action space
 
 First make the environment example, Then add the reward and state vector system.
-
 can either be graphic or not.
-
 
 
 ## Agent:
