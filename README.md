@@ -2,6 +2,12 @@
 
 Educational project
 
+## TODO:
+
+- aply changes from sandbox to main file;
+- make input dinamic;
+- change process order input;
+
 ## Keywords:
 - Model-based | Model-Free
 - Environment

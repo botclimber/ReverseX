@@ -9,7 +9,7 @@ jobs_data = [  # task = (machine_id, processing_time).
 """
 
 
-ini = np.array([[3,2,2],[2,4,1],[0,4,3]])
+ini = np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
 
 
 """
@@ -63,22 +63,25 @@ class RXEnv():
 		# action conversion to coordinates
 		# coord saved in (cd_row, cd_col) variables
 		x = 0
+		kill = False
 		for cd_row in range(len(self.state)):
 			for cd_col in range(len(self.state[cd_row])):
-				if x == action: break		
+				if x == action: 
+					kill = True 
+					break		
 				x += 1
-			if x == action: break
+			if kill: break
 
 		
 		
 		seq_error = False	
 		# verify if sequence is being respected
 		for i in range(cd_col):
-			if self.state[cd_row][i] > 0.0001:
+			if self.state[cd_row][i] > 0.01:
 				seq_error = True	
-			
-		print(self.state[cd_row][cd_col])
-		if self.state[cd_row][cd_col] <= 0.0001 or seq_error:
+		
+		
+		if self.state[cd_row][cd_col] <= 0.01 or seq_error:
 			reward = 0		
 	
 		else:
@@ -91,33 +94,31 @@ class RXEnv():
 			# 
 			# lambda function to get specific values from self.ps_result
 
-			get_ise = lambda x,y: int(x.split(',')[y]) # split task_id, started_time, ended_time
+			get_ise = lambda x,y: float(x.split(',')[y]) # split task_id, started_time, ended_time
 			gt_d = lambda x,y: self.ps_result['m'+str(x)][y] # get spicific data from ps_result	
-			ps_len = lambda x: len(ps_result['m'+str(x)])
+			ps_len = lambda x: len(self.ps_result['m'+str(x)])
 
 			# get machine id where product was processed before
 			already_proc = False
-			for mach_id in range(len(self.state[cd_row]-2), -1, -1):
-				if self.state[cd_row][mach_id] == 0.0001: 
+			for mach_id in range(cd_col-1, -1, -1):
+				if self.state[cd_row][mach_id] == 0.01: 
 
 					# get specific task data from machine
-					for mach_queue in range(len(self.ps_state['m'+str(mach_id)]-1), -1, -1):
-						if get_ise(self.ps_state['m'+str(mach_id)][mach_queue], 0) == cd_row: break
+					for mach_queue in range(len(self.ps_result['m'+str(mach_id)])-1, -1, -1):
+						if get_ise(self.ps_result['m'+str(mach_id)][mach_queue], 0) == cd_row: break
 					
 					already_proc = True
 					break
 			
 
-		
 			stt_at = get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2) if not already_proc else max(get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2), get_ise(gt_d(mach_id, mach_queue), 2))
 			end_at = stt_at + self.state[cd_row][cd_col]	
 			
 			self.ps_result['m'+str(cd_col)].append('{},{},{}'.format(cd_row, stt_at, end_at))
 
 
-			self.state[cd_row][cd_col] = 0.0001
+			self.state[cd_row][cd_col] = 0.01
 			
-			self.queue += 1
 			if self.queue == 7: 
 				done = True
 				
@@ -130,7 +131,9 @@ class RXEnv():
 
 				reward = 100*(1/pow(1.025, x)) 			
 			
-			else: reward = 1			
+			else: 
+				self.queue += 1
+				reward = 1
 
 		return self.state, reward, done
 			
@@ -142,14 +145,13 @@ class RXEnv():
 		
 	
 	def render(self):
+		print("\n")
 		for i in range(3):
-			print('Machine ', i,' :')
-			for j in range(len(self.ps_result['m'+str(i)])):
-				print(self.ps_result['m'+str(i)][j])
-
-			print(' \n')
-		print(self.state)
-
+			print('Machine ', i,' :', end = " ")
+			for j in range(1,len(self.ps_result['m'+str(i)])):
+				print("[",self.ps_result['m'+str(i)][j],"]", end = " ")
+			print("\n")
+	
 	def close(self):
 		pass
 
@@ -157,9 +159,18 @@ class RXEnv():
 if __name__ == "__main__":
 	prog = RXEnv()
 	prog.reset()
-	obs, reward, done = prog.step(3)
-	print("self.state: ",obs," | reward: ", reward," | done: ", done)
-	prog.render()
+	
+	for x in range(10):
+		obs, reward, done = prog.step(x)
+		
+		
+		print("step:",x," | reward: ", reward," | done: ", done)
+		
+		if done:
+			prog.render() 
+			break
+	
+	
 
 
 
