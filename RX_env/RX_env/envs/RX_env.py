@@ -21,7 +21,7 @@ class RXEnv(gym.Env):
 		No real time obs.
 
 	Observation:
-		- tasks, machines
+		- tasks (row), machines (col), time([row][col]) 
 		ex: 
 				mach0 mach1 mach2
 			task0	3     2     2
@@ -34,16 +34,21 @@ class RXEnv(gym.Env):
 	have 8 moves to make. task0 3 moves, task1 3 moves, task2 2 moves.
 
 	Reward:
-		- if picked the same action twice reward = -1
+		- if picked the same action twice reward = 0
 		- for very move reward = 1
-		- when episode done reward = [FORMULA] 
+		- when episode done reward:
+			  
+			r(T) = 1000*(pow(y, Topt)/pow(y, T)) 
+			- y = 1.025 
+			- Topt = Optimal time for a job to end
+			- T = job that take longer to end			
 
 """	
 
 	def __init__(self):
 		
 		self.obs_space = spaces.Box(low = 0, high = np.inf, shape=(3,3), dtype=np.float32) 
-		self.act_space = spaces.Discrete(9)
+		self.act_space = spaces.Discrete(8)
 	
 		self.queue = Null # check if done by saving all valid steps	
 		self.state = Null
@@ -117,11 +122,11 @@ class RXEnv(gym.Env):
 
 
 			self.state[cd_row][cd_col] = 0.0001
+			
 			self.queue += 1
-
-			if self.queue == 8: 
+			if self.queue == 7: 
 				done = True
-				reward = ? # considerate time spent by all jobs/tasks less time = more reward 	
+				reward = 1000*(1/pow(1.025, max_end_time)) 			
 			
 			else: reward = 1			
 
