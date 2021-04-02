@@ -4,9 +4,11 @@ Educational project
 
 ## TODO:
 
-- [ ] aply changes from sandbox to main file;
+- [x] aply changes from sandbox to main file;
 - [x] make input dinamic;
 - [ ] (in_progress)change process order input;
+
+- [ ] test AI Agents (baselines, Parl)
 
 ## Keywords:
 - Model-based | Model-Free

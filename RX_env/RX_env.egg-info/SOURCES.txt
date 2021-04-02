@@ -1,4 +1,3 @@
-README.md
 setup.py
 RX_env.egg-info/PKG-INFO
 RX_env.egg-info/SOURCES.txt
