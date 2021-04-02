@@ -4,9 +4,9 @@ Educational project
 
 ## TODO:
 
-- aply changes from sandbox to main file;
-- make input dinamic;
-- change process order input;
+- [ ] aply changes from sandbox to main file;
+- [x] make input dinamic;
+- [ ] (in_progress)change process order input;
 
 ## Keywords:
 - Model-based | Model-Free

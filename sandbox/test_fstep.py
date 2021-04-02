@@ -1,16 +1,5 @@
 import numpy as np
 
-"""
-jobs_data = [  # task = (machine_id, processing_time).
-        [(0, 3), (1, 2), (2, 2)],  # Job0
-        [(0, 2), (2, 1), (1, 4)],  # Job1
-        [(1, 4), (2, 3)]  # Job2
-    ]
-"""
-
-
-ini = np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
-
 
 """
 Description:
@@ -41,12 +30,41 @@ Reward:
 class RXEnv():
 
 	def __init__(self):
-		#self.obs_space = spaces.Box(low = 0, high = np.inf, shape=(3,3), dtype=np.float32) 
-		#self.act_space = spaces.Discrete(8)
+		
+		"""
+		jobs_data = [  # task = (machine_id, processing_time).
+			[(0, 3), (1, 2), (2, 2)],  # Job0
+			[(0, 2), (2, 1), (1, 4)],  # Job1
+			[(1, 4), (2, 3)]  # Job2
+		    ]
+		"""
+		# -------------- input data ---------------
+		self.ini = np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
+		
+		self.rows = len(self.ini)
+		self.cols = len(self.ini[0])
+		self.t_tasks = self.rows * self.cols		
+		
+		self.done_trigger = np.count_nonzero(self.ini > 0) - 1 # num of valid moves/choices (-1 cause 0 counts too)
+
+		# -----------------------------------------
+		
+		
+		#self.obs_space = spaces.Box(low = 0, high = np.inf, shape=(self.rows, self.cols), dtype=np.float32) 
+		#self.act_space = spaces.Discrete(self.t_tasks)
 
 		self.queue = 0 # count valid steps	
 		self.state = None
-		self.ps_result = {'m0': ['0,0,0'], 'm1': ['0,0,0'], 'm2': ['0,0,0']} # progression state result ['task_id, start_time, end_time']
+		self.ps_result = None  # progression state result m(x): ['task_id, start_time, end_time']
+
+	
+	def g_operation(self):
+		data = {}
+		for i in range(self.cols):
+			data['m'+str(i)] = ['0,0,0'] 
+		
+		return data
+		
 
 	def step(self, action):
 		done = False
@@ -56,7 +74,7 @@ class RXEnv():
 	
 		Rules:
 			- action value cant be the same as previous ones.		
-			- done when all tasks finished
+			- done when all tasks fself.inished
 			- can only be chosen transactions that respect sequence production
 		"""
 
@@ -64,8 +82,8 @@ class RXEnv():
 		# coord saved in (cd_row, cd_col) variables
 		x = 0
 		kill = False
-		for cd_row in range(len(self.state)):
-			for cd_col in range(len(self.state[cd_row])):
+		for cd_row in range(self.rows):
+			for cd_col in range(self.cols):
 				if x == action: 
 					kill = True 
 					break		
@@ -73,7 +91,7 @@ class RXEnv():
 			if kill: break
 
 		
-		
+		# CRITICAL (&seq)	
 		seq_error = False	
 		# verify if sequence is being respected
 		for i in range(cd_col):
@@ -88,7 +106,7 @@ class RXEnv():
 			# make state changes 
 			# save progression
 
-			# 1- if cd_col-1 > 0 product already in process check if finished
+			# 1- if cd_col-1 > 0 product already in process check if fself.inished
 			# 2- if target processing machine > 0
 			# 3- if 1,2: max(target processing machine, machine where it was )
 			# 
@@ -98,6 +116,8 @@ class RXEnv():
 			gt_d = lambda x,y: self.ps_result['m'+str(x)][y] # get spicific data from ps_result	
 			ps_len = lambda x: len(self.ps_result['m'+str(x)])
 
+
+			# - CRITICAL (&seq)
 			# get machine id where product was processed before
 			already_proc = False
 			for mach_id in range(cd_col-1, -1, -1):
@@ -119,15 +139,15 @@ class RXEnv():
 
 			self.state[cd_row][cd_col] = 0.01
 			
-			if self.queue == 7: 
+			if self.queue == self.done_trigger: 
 				done = True
 				
+				# pick job that takes more time to finish
 				x = 0
-				for i in range(ps_len(2)):
-					time = get_ise(gt_d(2, i), 2)
-					if time > x:
+				for i in range(self.cols):
+					time = get_ise( gt_d(i, len(self.ps_result['m'+str(i)])-1), 2)
+					if  time > x:
 						x = time
-							
 
 				reward = 100*(1/pow(1.025, x)) 			
 			
@@ -140,13 +160,13 @@ class RXEnv():
 
 	def reset(self):
 		self.queue = 0 
-		self.ps_result = {'m0': ['0,0,0'], 'm1': ['0,0,0'], 'm2': ['0,0,0']}
-		self.state = ini 
+		self.ps_result = self.g_operation()
+		self.state = self.ini 
 		
 	
 	def render(self):
 		print("\n")
-		for i in range(3):
+		for i in range(self.cols):
 			print('Machine ', i,' :', end = " ")
 			for j in range(1,len(self.ps_result['m'+str(i)])):
 				print("[",self.ps_result['m'+str(i)][j],"]", end = " ")
@@ -160,7 +180,7 @@ if __name__ == "__main__":
 	prog = RXEnv()
 	prog.reset()
 	
-	for x in range(10):
+	for x in range(50):
 		obs, reward, done = prog.step(x)
 		
 		
