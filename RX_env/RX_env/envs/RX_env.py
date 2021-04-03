@@ -30,6 +30,17 @@ Reward:
 """
 
 
+# -------------- input data ---------------
+# ex: np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
+#
+# - ROWS
+# - COLS
+
+ROWS = 3
+COLS = 3
+
+# -----------------------------------------
+
 class RXEnv(gym.Env):
 
 	def __init__(self):
@@ -41,29 +52,26 @@ class RXEnv(gym.Env):
 			[(1, 4), (2, 3)]  # Job2
 		    ]
 		"""
-		# -------------- input data ---------------
-		self.ini = np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
 
-		self.rows = len(self.ini)
-		self.cols = len(self.ini[0])
-		self.t_tasks = self.rows * self.cols
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(ROWS, COLS), dtype=np.float32)
+		self.action_space = spaces.Discrete(ROWS*COLS)
 
-		self.done_trigger = np.count_nonzero(self.ini > 0) - 1 # num of valid moves/choices (-1 cause 0 counts too)
-
-		# -----------------------------------------
-
-
-		self.obs_space = spaces.Box(low = 0, high = np.inf, shape=(self.rows, self.cols), dtype=np.float32)
-		self.act_space = spaces.Discrete(self.t_tasks)
-
+		self.done_trigger = None # num of valid moves/choices (-1 cause 0 counts too)
 		self.queue = 0 # count valid steps
 		self.state = None
 		self.ps_result = None  # progression state result m(x): ['task_id, start_time, end_time']
+		
+		self.seed()		
 
+	
+	def seed(self, seed=None):
+		self.np_random, seed = seeding.np_random(seed)
+		return [seed]
+	
 
 	def g_operation(self):
 		data = {}
-		for i in range(self.cols):
+		for i in range(COLS):
 			data['m'+str(i)] = ['0,0,0']
 
 		return data
@@ -85,8 +93,8 @@ class RXEnv(gym.Env):
 		# coord saved in (cd_row, cd_col) variables
 		x = 0
 		kill = False
-		for cd_row in range(self.rows):
-			for cd_col in range(self.cols):
+		for cd_row in range(ROWS):
+			for cd_col in range(COLS):
 				if x == action:
 					kill = True
 					break
@@ -147,7 +155,7 @@ class RXEnv(gym.Env):
 
 				# pick job that takes more time to finish
 				x = 0
-				for i in range(self.cols):
+				for i in range(COLS):
 					time = get_ise( gt_d(i, len(self.ps_result['m'+str(i)])-1), 2)
 					if  time > x:
 						x = time
@@ -158,19 +166,26 @@ class RXEnv(gym.Env):
 				self.queue += 1
 				reward = 1
 
-		return self.state, reward, done
+		return np.array(self.state), reward, done, {}
 
 
-	def reset(self):
+	def reset(self, _input = np.array([[3,2,2],[2,4,1],[0,4,3]])):
+		
+		# allow outside input
+		if _input is None:		
+			self.state = np.array(self.np_random.randint(low=0, high=20, size=(ROWS, COLS)), dtype=float)
+		else:
+			self.state = np.array(_input, dtype=float)
+		
+		self.done_trigger = np.count_nonzero(self.state > 0) - 1
 		self.queue = 0
 		self.ps_result = self.g_operation()
-		self.state = np.array(self.ini)
 		
 		return self.state
 	
 	def render(self):
 		print("\n")
-		for i in range(self.cols):
+		for i in range(COLS):
 			print('Machine ', i,' :', end = " ")
 			for j in range(1,len(self.ps_result['m'+str(i)])):
 				print("[",self.ps_result['m'+str(i)][j],"]", end = " ")
