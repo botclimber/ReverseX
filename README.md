@@ -5,6 +5,9 @@ Educational project
 JOB SHOP Problem (JSP) . The point is to make an RL Agent solve scheduling problems for us.
 
 ## Issues
+v0.13:
+	- random seed training 
+	- infinite action bug fixed
 
 v0.12:
 - BUG:

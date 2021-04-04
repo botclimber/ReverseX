@@ -1,12 +1,15 @@
 import gym
-import numpy as np
 from gym import error, spaces, utils
 from gym.utils import seeding
+
+import numpy as np
+import random
 
 """
 Description:
 	A job shop environment, production scheduling.
 	No real time obs.
+
 Observation:
 	- tasks (row), machines (col), time(min).order
 	ex:
@@ -15,16 +18,19 @@ Observation:
 		task1	2.1   4.3     1.2
 		task2	0     4.1     3.2
 
-Action:
-	- action is the number of transactions in this case 8 cause we
-have 8 moves to make. task0 3 moves, task1 3 moves, task2 2 moves.
+Action:	
+	- is the number of all matrix index. it's done by assumption that all 
+index will have values wich represent time and order. if not index value will
+be 0. 0 represents no process in that machine (col)
+
 Reward:
-	- if picked the same action twice or no sequence respect reward = -1
-	- if action result in array reward = 0
+	- if picked the same action twice, no process valid option or no 
+sequence respect, reward = -1
 	- for every valid move/choice reward = 1
 	- when episode done reward:
 
 		r(T) = 1000*(pow(y, Topt)/pow(y, T))
+		
 		- y = 1.025
 		- Topt = Optimal time for a job to end
 		- T = job that take longer to end
@@ -34,8 +40,8 @@ Reward:
 # -------------- input data ---------------
 # ex: np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
 #
-# - ROWS
-# - COLS
+# - ROWS (jobs)
+# - COLS (machines)
 
 ROWS = 3
 COLS = 3
@@ -57,7 +63,7 @@ class RXEnv(gym.Env):
 		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(ROWS, COLS), dtype=np.float32)
 		self.action_space = spaces.Discrete(ROWS*COLS)
 
-		self.max_invalid_steps = 0 
+		self.max_invalid_steps = 0 # MAX_INVALID_STEPS 
 		self.max_valid_steps = 0 # num of valid moves/choices (-1 cause 0 counts too)	
 		
 		self.state = None
@@ -69,9 +75,30 @@ class RXEnv(gym.Env):
 	def seed(self, seed=None):
 		self.np_random, seed = seeding.np_random(seed)
 		return [seed]
-	
 
-	def g_operation(self):
+	
+	def set_rand_order(self, rand_data):
+		rand_possible_order = []
+
+		for x in range(2, COLS+2):
+			rand_possible_order.append(float('0.'+str(x)))		
+	
+		for x in range(ROWS):
+			stack = rand_possible_order.copy()
+			
+			for y in range(COLS):
+				if rand_data[x][y]:
+					
+					order = random.choice(stack)
+					stack.remove(order)
+					rand_data[x][y] += order 
+		
+		return rand_data
+
+
+
+
+	def g_machines_interface(self):
 		data = {}
 		for i in range(COLS):
 			data['m'+str(i)] = ['0,0,0']
@@ -87,16 +114,17 @@ class RXEnv(gym.Env):
 		
 		"""
 		Approach:
-
+			
 
 		Rules:
 			- action value cant be the same as previous ones.
-			- done when all tasks fself.inished
+			- action cant be one where index value = 0
 			- can only be chosen transactions that respect sequence production
+			- done when all tasks chosen or MAX_INVALID_STEPS spent
 		"""
 
-		# action conversion to coordinates
-		# coord saved in (cd_row, cd_col) variables
+		# action conversion to indexes
+		# indexes saved in (cd_row, cd_col) variables
 		x = 0
 		kill = False
 		for cd_row in range(ROWS):
@@ -156,7 +184,7 @@ class RXEnv(gym.Env):
 
 			self.ps_result['m'+str(cd_col)].append('{},{},{}'.format(cd_row, stt_at, end_at))
 
-
+			# update self.state
 			self.state[cd_row][cd_col] = g_order(self.state[cd_row][cd_col])
 
 			if not self.max_valid_steps:
@@ -168,7 +196,7 @@ class RXEnv(gym.Env):
 					time = get_ise( gt_d(i, len(self.ps_result['m'+str(i)])-1), 2)
 					if  time > x:
 						x = time
-
+				
 				reward = 1000*(1/pow(1.025, x))
 
 			else:
@@ -179,19 +207,23 @@ class RXEnv(gym.Env):
 
 
 	def reset(self, _input = np.array([[3.2,2.3,2.4],[2.2,4.4,1.3],[0,4.2,3.3]])):
+	#def reset(self, _input = None):
 		
 		# allow outside input
 		if _input is None:		
-			self.state = np.array(self.np_random.randint(low=0, high=20, size=(ROWS, COLS)), dtype=float)
+			self.state = self.set_rand_order(np.array(self.np_random.randint(low=0, high=20, size=(ROWS, COLS)), dtype=float))
+		
 		else:
 			self.state = np.array(_input, dtype=float)
 		
 		self.max_valid_steps = np.count_nonzero(self.state > 0) - 1
 		self.max_invalid_steps = MAX_INVALID_STEPS
-		self.ps_result = self.g_operation()
+		self.ps_result = self.g_machines_interface()
 		
 		return self.state
+
 	
+
 	def render(self):
 		print("\n")
 		for i in range(COLS):
