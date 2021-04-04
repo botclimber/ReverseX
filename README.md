@@ -6,6 +6,10 @@ JOB SHOP Problem (JSP) . The point is to make an RL Agent solve scheduling probl
 
 ## Issues
 
+v0.12:
+- BUG:
+	- infinite action
+
 v0.11:-
 
 
