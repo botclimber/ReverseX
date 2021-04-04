@@ -8,19 +8,20 @@ Description:
 	A job shop environment, production scheduling.
 	No real time obs.
 Observation:
-	- tasks (row), machines (col), time([row][col])
+	- tasks (row), machines (col), time(min).order
 	ex:
 			mach0 mach1 mach2
-		task0	3     2     2
-		task1	2     4     1
-		task2	0     4     3
+		task0	3.1   2.2     2.3
+		task1	2.1   4.3     1.2
+		task2	0     4.1     3.2
 
 Action:
 	- action is the number of transactions in this case 8 cause we
 have 8 moves to make. task0 3 moves, task1 3 moves, task2 2 moves.
 Reward:
-	- if picked the same action twice reward = 0
-	- for very move reward = 1
+	- if picked the same action twice or no sequence respect reward = -1
+	- if action result in array reward = 0
+	- for every valid move/choice reward = 1
 	- when episode done reward:
 
 		r(T) = 1000*(pow(y, Topt)/pow(y, T))
@@ -38,7 +39,7 @@ Reward:
 
 ROWS = 3
 COLS = 3
-
+MAX_INVALID_STEPS = 1e3
 # -----------------------------------------
 
 class RXEnv(gym.Env):
@@ -46,18 +47,19 @@ class RXEnv(gym.Env):
 	def __init__(self):
 
 		"""
-		jobs_data = [  # task = (machine_id, processing_time).
-			[(0, 3), (1, 2), (2, 2)],  # Job0
-			[(0, 2), (2, 1), (1, 4)],  # Job1
-			[(1, 4), (2, 3)]  # Job2
-		    ]
+		google ex: jobs_data = [  # task = (machine_id, processing_time).
+				[(0, 3), (1, 2), (2, 2)],  # Job0
+				[(0, 2), (2, 1), (1, 4)],  # Job1
+				[(1, 4), (2, 3)]  # Job2
+		    		]
 		"""
-
+		
 		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(ROWS, COLS), dtype=np.float32)
 		self.action_space = spaces.Discrete(ROWS*COLS)
 
-		self.done_trigger = None # num of valid moves/choices (-1 cause 0 counts too)
-		self.queue = 0 # count valid steps
+		self.max_invalid_steps = 0 
+		self.max_valid_steps = 0 # num of valid moves/choices (-1 cause 0 counts too)	
+		
 		self.state = None
 		self.ps_result = None  # progression state result m(x): ['task_id, start_time, end_time']
 		
@@ -78,7 +80,11 @@ class RXEnv(gym.Env):
 
 
 	def step(self, action):
-		done = False
+		done = True if not self.max_invalid_steps else False
+	
+		# get order from time.order
+		g_order = lambda x: round(x - int(x), 3)
+		
 		"""
 		Approach:
 
@@ -102,17 +108,19 @@ class RXEnv(gym.Env):
 			if kill: break
 
 
-		# CRITICAL (&seq)
 		seq_error = False
 		# verify if sequence is being respected
-		for i in range(cd_col):
-			if self.state[cd_row][i] > 0.01:
+		for i in range(COLS):
+			d = g_order(self.state[cd_row][i])
+			if self.state[cd_row][i] >= 1 and d < g_order(self.state[cd_row][cd_col]):
 				seq_error = True
 
+		
 
-		if self.state[cd_row][cd_col] <= 0.01 or seq_error:
-			reward = 0
-
+		if self.state[cd_row][cd_col] < 1 or seq_error: 
+			self.max_invalid_steps -= 1
+			reward = -1
+		
 		else:
 			# make state changes
 			# save progression
@@ -128,12 +136,13 @@ class RXEnv(gym.Env):
 			ps_len = lambda x: len(self.ps_result['m'+str(x)])
 
 
-			# - CRITICAL (&seq)
 			# get machine id where product was processed before
 			already_proc = False
-			for mach_id in range(cd_col-1, -1, -1):
-				if self.state[cd_row][mach_id] == 0.01:
-
+			for mach_id in range(COLS):
+				
+				d = round(g_order(self.state[cd_row][cd_col])-0.1, 3)
+				if g_order(self.state[cd_row][mach_id]) == d  :
+					
 					# get specific task data from machine
 					for mach_queue in range(len(self.ps_result['m'+str(mach_id)])-1, -1, -1):
 						if get_ise(self.ps_result['m'+str(mach_id)][mach_queue], 0) == cd_row: break
@@ -143,14 +152,14 @@ class RXEnv(gym.Env):
 
 
 			stt_at = get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2) if not already_proc else max(get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2), get_ise(gt_d(mach_id, mach_queue), 2))
-			end_at = stt_at + self.state[cd_row][cd_col]
+			end_at = stt_at + int(self.state[cd_row][cd_col])
 
 			self.ps_result['m'+str(cd_col)].append('{},{},{}'.format(cd_row, stt_at, end_at))
 
 
-			self.state[cd_row][cd_col] = 0.01
+			self.state[cd_row][cd_col] = g_order(self.state[cd_row][cd_col])
 
-			if self.queue == self.done_trigger:
+			if not self.max_valid_steps:
 				done = True
 
 				# pick job that takes more time to finish
@@ -160,16 +169,16 @@ class RXEnv(gym.Env):
 					if  time > x:
 						x = time
 
-				reward = 100*(1/pow(1.025, x))
+				reward = 1000*(1/pow(1.025, x))
 
 			else:
-				self.queue += 1
+				self.max_valid_steps -= 1
 				reward = 1
 
 		return np.array(self.state), reward, done, {}
 
 
-	def reset(self, _input = np.array([[3,2,2],[2,4,1],[0,4,3]])):
+	def reset(self, _input = np.array([[3.2,2.3,2.4],[2.2,4.4,1.3],[0,4.2,3.3]])):
 		
 		# allow outside input
 		if _input is None:		
@@ -177,8 +186,8 @@ class RXEnv(gym.Env):
 		else:
 			self.state = np.array(_input, dtype=float)
 		
-		self.done_trigger = np.count_nonzero(self.state > 0) - 1
-		self.queue = 0
+		self.max_valid_steps = np.count_nonzero(self.state > 0) - 1
+		self.max_invalid_steps = MAX_INVALID_STEPS
 		self.ps_result = self.g_operation()
 		
 		return self.state

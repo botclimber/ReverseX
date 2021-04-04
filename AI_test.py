@@ -5,7 +5,7 @@ env = gym.make('RX_env:RX-v0')
 for i_episode in range(1):
 	observation = env.reset()
 
-	for t in range(50):
+	for t in range(500):
 
 		print(observation)
 		action = env.action_space.sample()
