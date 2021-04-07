@@ -8,8 +8,8 @@ requirement:
 python==(3.5 > < 3.7)
 
 
-- environment: file RX_env
-- agents: file SB_agent
+- environment dir: RX_env
+- agents dir: RX_agent
 
 ## Issues
 v0.14:
@@ -32,10 +32,10 @@ a2c: with 500000 steps:
 - train faster than dqn
 
 Train value_loss parcial variance:
-![Image of api_doc](https://github.com/botclimber/ReverseX/blob/main/img/a2c_eval.png)
+![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_eval.png)
 
 Evalutation:
-![Image of api_doc](https://github.com/botclimber/ReverseX/blob/main/img/a2c_train.png)
+![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_train.png)
 
 
 v0.13:
