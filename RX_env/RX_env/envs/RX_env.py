@@ -113,8 +113,6 @@ class RXEnv(gym.Env):
 		g_order = lambda x: round(x - int(x), 3)
 		
 		"""
-		Approach:
-			
 
 		Rules:
 			- action value cant be the same as previous ones.
@@ -177,8 +175,18 @@ class RXEnv(gym.Env):
 
 					already_proc = True
 					break
+	
+			"""
+			[stt_at, end_at]
+				- stt_at (started_at) 
+				- end_at (ended_at)
+			
 
-
+			stt_at: is the longest time between the actual machine last job processed time and 
+		the machine where this specific job was processed.
+			end_at: is the stt_at plus time the job needs to be processed. stt_at + time 
+		(->time<- .order).
+			"""
 			stt_at = get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2) if not already_proc else max(get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2), get_ise(gt_d(mach_id, mach_queue), 2))
 			end_at = stt_at + int(self.state[cd_row][cd_col])
 

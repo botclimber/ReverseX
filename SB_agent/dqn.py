@@ -7,7 +7,7 @@ from stable_baselines import DQN
 env = gym.make('RX_env:RX-v0')
 
 model = DQN(MlpPolicy, env, verbose=1)
-model.learn(total_timesteps=50000)
+model.learn(total_timesteps=500000)
 model.save("RX")
 
 #del model # remove to demonstrate saving and loading
