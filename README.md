@@ -32,9 +32,11 @@ a2c: with 500000 steps:
 - train faster than dqn
 
 Train value_loss parcial variance:
+
 ![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_eval.png)
 
 Evalutation:
+
 ![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_train.png)
 
 
