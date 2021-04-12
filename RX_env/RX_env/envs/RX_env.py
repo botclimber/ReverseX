@@ -94,34 +94,7 @@ class RXEnv(gym.Env):
 		self.state = None
 		self.ps_result = None  # progression state result m(x): ['task_id, start_time, end_time']
 		
-		self.seed()		
-
 	
-	def seed(self, seed=None):
-		self.np_random, seed = seeding.np_random(seed)
-		return [seed]
-
-	
-	def set_rand_order(self, rand_data):
-		rand_possible_order = []
-
-		for x in range(2, self.COLS+2):
-			rand_possible_order.append(float('0.'+str(x)))		
-	
-		for x in range(self.ROWS):
-			stack = rand_possible_order.copy()
-			
-			for y in range(self.COLS):
-				if rand_data[x][y]:
-					
-					order = random.choice(stack)
-					stack.remove(order)
-					rand_data[x][y] += order 
-		
-		return rand_data
-
-
-
 
 	def g_machines_interface(self):
 		data = {}
