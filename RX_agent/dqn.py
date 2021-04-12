@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
@@ -8,7 +9,7 @@ env = gym.make('RX_env:RX-v0')
 
 model = DQN(MlpPolicy, env, verbose=1)
 model.learn(total_timesteps=500000)
-model.save("RX")
+model.save("dqn_x")
 
 #del model # remove to demonstrate saving and loading
 #model = DQN.load("RX")

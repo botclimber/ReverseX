@@ -1,7 +1,10 @@
+import os
 import gym
+
 from gym import error, spaces, utils
 from gym.utils import seeding
 
+import csv
 import numpy as np
 import random
 
@@ -14,9 +17,9 @@ Observation:
 	- tasks (row), machines (col), time(min).order
 	ex:
 			mach0 mach1 mach2
-		task0	3.1   2.2     2.3
-		task1	2.1   4.3     1.2
-		task2	0     4.1     3.2
+		job0	3.1   2.2     2.3
+		job1	2.1   4.3     1.2
+		job2	0     4.1     3.2
 
 Action:	
 	- is the number of all matrix index. it's done by assumption that all 
@@ -38,15 +41,36 @@ sequence respect, reward = -1
 
 
 # -------------- input data ---------------
-# ex: np.array([[3,2,2],[2,4,1],[0,4,3]], dtype=float)
+# ex: np.array([[3.1,2.2,2.3],[2.1,4.3,1.2],[0,4.1,3.2]], dtype=float)
 #
-# - ROWS (jobs)
-# - COLS (machines)
+# - self.ROWS (jobs)
+# - self.COLS (machines)
 
-ROWS = 3
-COLS = 3
 MAX_INVALID_STEPS = 1e3
+
+def load_data():
+	data = []
+	r_size = 0
+	c_size = 0
+	
+	with open('../data/data.csv', newline='') as csvfile:
+		reader = csv.reader(csvfile, delimiter=',') 
+		    
+		for row in reader:
+			r_size += 1
+			for x in range(len(row)):
+				row[x] = row[x].replace(' ','.')
+				row[x] = float(row[x])
+		    
+			data.append(row)
+	
+	c_size = r_size
+	return data, r_size, c_size
+
 # -----------------------------------------
+
+
+
 
 class RXEnv(gym.Env):
 
@@ -59,9 +83,10 @@ class RXEnv(gym.Env):
 				[(1, 4), (2, 3)]  # Job2
 		    		]
 		"""
+		self._input, self.ROWS, self.COLS = load_data()		
 		
-		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(ROWS, COLS), dtype=np.float32)
-		self.action_space = spaces.Discrete(ROWS*COLS)
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(self.ROWS, self.COLS), dtype=np.float32)
+		self.action_space = spaces.Discrete(self.ROWS*self.COLS)
 
 		self.max_invalid_steps = 0 # MAX_INVALID_STEPS 
 		self.max_valid_steps = 0 # num of valid moves/choices (-1 cause 0 counts too)	
@@ -80,13 +105,13 @@ class RXEnv(gym.Env):
 	def set_rand_order(self, rand_data):
 		rand_possible_order = []
 
-		for x in range(2, COLS+2):
+		for x in range(2, self.COLS+2):
 			rand_possible_order.append(float('0.'+str(x)))		
 	
-		for x in range(ROWS):
+		for x in range(self.ROWS):
 			stack = rand_possible_order.copy()
 			
-			for y in range(COLS):
+			for y in range(self.COLS):
 				if rand_data[x][y]:
 					
 					order = random.choice(stack)
@@ -100,7 +125,7 @@ class RXEnv(gym.Env):
 
 	def g_machines_interface(self):
 		data = {}
-		for i in range(COLS):
+		for i in range(self.COLS):
 			data['m'+str(i)] = ['0,0,0']
 
 		return data
@@ -125,8 +150,8 @@ class RXEnv(gym.Env):
 		# indexes saved in (cd_row, cd_col) variables
 		x = 0
 		kill = False
-		for cd_row in range(ROWS):
-			for cd_col in range(COLS):
+		for cd_row in range(self.ROWS):
+			for cd_col in range(self.COLS):
 				if x == action:
 					kill = True
 					break
@@ -136,7 +161,7 @@ class RXEnv(gym.Env):
 
 		seq_error = False
 		# verify if sequence is being respected
-		for i in range(COLS):
+		for i in range(self.COLS):
 			d = g_order(self.state[cd_row][i])
 			if self.state[cd_row][i] >= 1 and d < g_order(self.state[cd_row][cd_col]):
 				seq_error = True
@@ -164,7 +189,7 @@ class RXEnv(gym.Env):
 
 			# get machine id where product was processed before
 			already_proc = False
-			for mach_id in range(COLS):
+			for mach_id in range(self.COLS):
 				
 				d = round(g_order(self.state[cd_row][cd_col])-0.1, 3)
 				if g_order(self.state[cd_row][mach_id]) == d  :
@@ -190,7 +215,7 @@ class RXEnv(gym.Env):
 			stt_at = get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2) if not already_proc else max(get_ise(gt_d(cd_col, ps_len(cd_col)-1), 2), get_ise(gt_d(mach_id, mach_queue), 2))
 			end_at = stt_at + int(self.state[cd_row][cd_col])
 
-			self.ps_result['m'+str(cd_col)].append('{},{},{}'.format(cd_row, stt_at, end_at))
+			self.ps_result['m'+str(cd_col)].append('{},{},{}'.format(cd_row, int(stt_at), int(end_at)))
 
 			# update self.state
 			self.state[cd_row][cd_col] = g_order(self.state[cd_row][cd_col])
@@ -200,7 +225,7 @@ class RXEnv(gym.Env):
 
 				# pick job that takes more time to finish
 				x = 0
-				for i in range(COLS):
+				for i in range(self.COLS):
 					time = get_ise( gt_d(i, len(self.ps_result['m'+str(i)])-1), 2)
 					if  time > x:
 						x = time
@@ -214,27 +239,21 @@ class RXEnv(gym.Env):
 		return np.array(self.state), reward, done, {}
 
 
-	def reset(self, _input = np.array([[3.2,2.3,2.4],[2.2,4.4,1.3],[0,4.2,3.3]])):
-	#def reset(self, _input = None):
+	def reset(self):
 		
-		# allow outside input
-		if _input is None:		
-			self.state = self.set_rand_order(np.array(self.np_random.randint(low=0, high=20, size=(ROWS, COLS)), dtype=float))
-		
-		else:
-			self.state = np.array(_input, dtype=float)
-		
+		self.state = np.array(self._input, dtype=float)
 		self.max_valid_steps = np.count_nonzero(self.state > 0) - 1
 		self.max_invalid_steps = MAX_INVALID_STEPS
 		self.ps_result = self.g_machines_interface()
-		
+	
+		#print(self.state," \n\n")	
 		return self.state
 
 	
 
 	def render(self):
 		print("\n")
-		for i in range(COLS):
+		for i in range(self.COLS):
 			print('Machine ', i,' :', end = " ")
 			for j in range(1,len(self.ps_result['m'+str(i)])):
 				print("[",self.ps_result['m'+str(i)][j],"]", end = " ")
