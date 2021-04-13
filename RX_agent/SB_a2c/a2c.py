@@ -12,10 +12,10 @@ from stable_baselines import A2C
 #env = make_vec_env('RX_env:RX-v0', n_envs = 4)
 env = gym.make('RX_env:RX-v0')
 
-model = A2C(MlpPolicy, env, verbose=1, tensorboard_log="log/")
-model.learn(total_timesteps=50000, tb_log_name="first_run") 
-model.learn(total_timesteps=50000, tb_log_name="second_run", reset_num_timesteps=False) 
-model.learn(total_timesteps=50000, tb_log_name="third_run", reset_num_timesteps=False) 
+model = A2C(MlpPolicy, env, verbose=1, tensorboard_log="a2c_log/")
+model.learn(total_timesteps=100000, tb_log_name="first_run") 
+model.learn(total_timesteps=400000, tb_log_name="second_run", reset_num_timesteps=False) 
+model.learn(total_timesteps=500000, tb_log_name="third_run", reset_num_timesteps=False) 
 
 model.save("a2c_x")
 
