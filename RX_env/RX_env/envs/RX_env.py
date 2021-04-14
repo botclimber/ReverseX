@@ -53,7 +53,7 @@ def load_data():
 	r_size = 0
 	c_size = 0
 	
-	with open('../data/data.csv', newline='') as csvfile:
+	with open('../../data/data.csv', newline='') as csvfile:
 		reader = csv.reader(csvfile, delimiter=',') 
 		    
 		for row in reader:
