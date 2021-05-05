@@ -1,6 +1,5 @@
 import csv
 import re
-import numpy as np
 
 class JSS_TO_CSV():
 	
@@ -17,15 +16,23 @@ class JSS_TO_CSV():
 		data = self.clean()	
 		
 		j = []
+		_mem = []
 		for x in range(len(data)):
 			j.append([])
+			_mem.append([])		
 
 		for z in range(len(data)):
 			x = data[z].split()
 			for i in range(1, len(x), 2):
 				j[z].append("{} {}".format(x[i-1], x[i]))
-		
 	
+		
+		for x in range(len(j)):
+			for i in range(len(j[x])):
+				_mem[x].append("{} {}".format(self.g_order_nr(j[x][i], 0), i))
+				
+		
+
 		for x in range(len(j)):
 			aux = 0	
 			for y in range(len(j[x])):
@@ -34,7 +41,17 @@ class JSS_TO_CSV():
 						aux = j[x][y]
 						j[x][y] = j[x][k]
 						j[x][k] = aux
+		
+		
+		for x in range(len(j)):
+			for i in range(len(j[x])):
+				for n in _mem[x]:
+					if self.g_order_nr(j[x][i], 0) == self.g_order_nr(n, 0):
 						
+						j[x][i] = "{} {}".format(self.g_order_nr(j[x][i], 1), self.g_order_nr(n, 1))
+						break;	
+				
+
 
 		self.csv_data = data = self.chg_order(j)
 		return data
@@ -56,7 +73,7 @@ class JSS_TO_CSV():
 			
 		for x in range(len(data)):
 			for y in range(len(data[x])):
-				data[x][y] = "{} {}".format(self.g_order_nr(data[x][y], 0)+1, self.g_order_nr(data[x][y], 1))
+				data[x][y] = "{} {}".format(self.g_order_nr(data[x][y], 0), self.g_order_nr(data[x][y], 1)+1)
 		
 		return data	
 
@@ -81,11 +98,13 @@ class JSS_TO_CSV():
 
 
 
-f = open("data/ft06.jss", "r")
+if __name__ == "__main__":
 
-obj = JSS_TO_CSV(f)
-csv_file = obj.convert()
-obj.to_csv()
+	f = open("data/ft06.jss", "r")
+
+	obj = JSS_TO_CSV(f)
+	csv_file = obj.convert()
+	obj.to_csv()
 
 
 
