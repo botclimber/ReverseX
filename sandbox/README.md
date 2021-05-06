@@ -1,50 +1,67 @@
-# This directory to make random stuff
+# [THIS IS THE OLD AND FIRST VERSION README PROJECT ]
+----
 
-### Actual Step
-Testing environment
+# AI RL project
 
+Educational project
 
-### Next Step (already made)
+JOB SHOP Problem (JSP) . The point is to make an RL Agent solve scheduling problems for us.
 
-Create environment:
-1. Make some more deep research about environments
-2. write everything we will need for our environment, like main things as action_space and obs_space.
-3. make it compatible with gym, implementing 4 core methods and check how to instance and install it locally
-4. test it with agents (PARL DQN | baselines ACER,A2C,DQN)
-
-## Keywords:
-- Model-based | Model-Free
-- Environment
-- Agent
-- Action
-- State
-- Reward
-- Policy
-- Value Function
-- Function approximator
-- ?Markov decision process (MDV)
-- ?Dynamic programming (DP)
-- MODEL
+requirement:
+python==(3.5 > < 3.7)
 
 
-## Environment:
-- Simulation
-- State vector
-- Reward System
-- action space
+- environment dir: RX_env
+- agents dir: RX_agent
 
-First make the environment example, Then add the reward and state vector system.
-can either be graphic or not.
+## Issues
+v0.14:
+- Testing Agents and alg
+	- Agent from stable baselines
+		- dqn
+		- a2c 
+
+situation point:
+
+after a few tests with different algorithms (dqn, a2c, acer) the conclusion is that a2c in this particular problem acts better, and gives better results.
+
+dqn: with 500000 steps:
+- gives a range of results with huge disparity.
+- train takes to much time 
 
 
-## Agent:
+a2c: with 500000 steps:
+- gives a range of results with less disparity all the solutions are optimal.
+- train faster than dqn
 
-- Stable Baselines
-- PARL
-        - in sight, chinese framework
+Train value_loss parcial variance:
 
-## Algorithms:
+![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_eval.png)
 
-- DQN 
-- PPO 
-        - Proximal Policy Optimizaiton
+Evalutation:
+
+![Image of api_doc](https://github.com/botclimber/ReverseX/blob/master/img/a2c_train.png)
+
+
+v0.13:
+- random seed training 
+- infinite action bug fixed
+
+v0.12:
+- BUG:
+	- infinite action
+
+v0.11:-
+
+
+## TODO:
+
+- [x] aply changes from sandbox to main file;
+- [x] make input dinamic;
+- [x] change process order input;
+
+- test AI Agents:
+	- [x] Stable Baselines
+	- [ ] PARL
+
+
