@@ -1,8 +1,7 @@
 '''
 author: Daniel Silva
 version: v1.x
-description: -
-
+description: Environment for JSSP Reinforcement learning (RL)
 '''
 
 import os
@@ -11,7 +10,6 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-import csv 
 import numpy as np
 import random
 
@@ -50,11 +48,11 @@ class RXEnv(gym.Env):
 	
 	def __init__(self):
 		
-		self.observation_space = spaces.Box(low = 0, high = np.inf, shape(MACHINES Â+ (JOBS * 3) + 1, ), dtype = np.int64)
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape(MACHINES + (JOBS * 3) + 1, ), dtype = np.int64)
 		self.action_space = spaces.Discrete(JOBS)
 	
 		self.data = None
-		self.static_data = None	
+		# self.static_data = None	
 		
 		self.state = None
 		self.ps_result = None
@@ -97,18 +95,91 @@ class RXEnv(gym.Env):
 		return state
 
 
+        def g_machines_interface(self):
+                data = {}
+                for i in range(self.COLS):
+                        data['m'+str(i)] = ['0,0,0']
+
+                return data
+
 
 	def step(self, action):
-		pass
+		done = False
+
+		machine_idx = MACHINES+(JOBS*action)		
+		time_idx = machine_idx+1
+		nr_oprs_idx = machine_idx+2
+
+		job_machine = self.state[f_idx]
+		job_time = self.state[time_idx]	
+		job_nr_oprs = self.state[nr_oprs_idx]		
+
+		'''
+		Invalid actions:
+			- action equal a finalized job
+		'''	
+
+		if job_nr_oprs == 0: reward = -1
+		else:
+			
+			# increment in machine
+			# - check diff time between last opr machine and actual machine.
+			# - 
+
+			self.state[job_machine] += job_time	
+			
+			# decrement opr in state
+			job_nr_oprs -= 1		
+			self.state[nr_oprs_idx] = job_nr_oprs
+				
+			# change next opr in the specified job (mahcine, time)
+			if job_nr_oprs > 0:
+				self.state[machine_idx] = self.data['job'+str(action)][-job_nr_oprs][0]
+				self.state[time_idx] = self.data['job'+str(action)][-job_nr_oprs][1]		
+
+			else:
+				self.state[machine_idx] = 0
+				self.state[time_idx] = 0
+
+			# check absolute time
+			abs_time = min(self.state[:3])
+			self.state[-1] = abs_time
+	
+			# update ps_result
+			# - save progression. It will be the final result scheme
+			# - make diff between start and end in machine where operation will be processed
+			# ----	
+			
+			
+
+		
+
+			# ----
+
+			# make changes, in the end verify if there is no more operation to be processed in any job, if so send done = True
+			done = True
+			for x in range(MACHINES+2, len(self.state), 3):
+				if self.state[x] != 0:
+					done = False
+					break	
+			
+			if done: reward = 1e3*(1.025/pow(1.025, max(self.state[:3])))
+			else: reward = 1
+		
+
+		return np.array(self.state), reward, done, {}
 
 	def render(self):
 		pass		
 
 	def reset(self):
 		self.data = seed()
-		self.static_data = self.data
+		# self.static_data = self.data
 	
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
+		self.ps_result = self.g_machines_interface()		
+
+
 
 	def close(self):
 		pass
