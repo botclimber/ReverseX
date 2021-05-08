@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 
-env = gym.make('RX_env:RX-v0')
+env = gym.make('RX_env:RX-v1')
 
 
 for i_episode in range(1):

@@ -44,7 +44,7 @@ reward system:
 JOBS = 3
 MACHINES = 3 
 
-class RXEnv(gym.Env):
+class RXEnv():
 	
 	def __init__(self):
 		
@@ -59,6 +59,7 @@ class RXEnv(gym.Env):
 
 
 	def seed(self):
+		print("ENTRO!!!! \n")
 		'''
 		Generate data for training
 		'''
@@ -117,7 +118,7 @@ class RXEnv(gym.Env):
 		Invalid actions:
 			- action equal a finalized job
 		'''	
-
+		
 		if job_nr_oprs == 0: reward = -1
 		else:
 			
@@ -199,14 +200,25 @@ class RXEnv(gym.Env):
 		self.data = self.seed()
 		# self.static_data = self.data
 			
+		print(self.data ," \n")
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
+		print(self.state)
 		self.ps_result = self.g_machines_interface()		
+		print(self.ps_result)
 		
 		return self.state
-	
 
 	def close(self):
 		pass
 
 
+obj = RXEnv()
+obs = obj.reset()
+
+print(obj.state)
+obs, reward, done, info = obj.step(1)
+print(obj.state)
+obs, reward, done, info = obj.step(1)
+print(obj.state)
+obj.render()
 
