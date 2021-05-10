@@ -16,21 +16,20 @@ from stable_baselines import A2C
 #env = make_vec_env('RX_env:RX-v0', n_envs = 4)
 env = gym.make('RX_env:RX-v1')
 
-
-
 model = A2C(MlpPolicy, env, verbose=1, tensorboard_log="a2c_log/")
 
 stt = timer()
-model.learn(total_timesteps=25000, tb_log_name="first_m_a2c") 
+model.learn(total_timesteps=50000, tb_log_name="first_m_a2c") 
 #model.learn(total_timesteps=1000000, tb_log_name="second_m_a2c", reset_num_timesteps=False) 
 end = timer()
 
 model.save("a2c_x")
 
 #del model # remove to demonstrate saving and loading
+
 #model = A2C.load("a2c_x")
 
-obs = env.reset()
+obs = env.reset(True)
 reward = 0
 step = 0
 while True:
@@ -38,7 +37,7 @@ while True:
 	action, _states = model.predict(obs)
 	obs, rewards, dones, info = env.step(action)
 	
-	print("Step: ",step," | State: ", obs)
+	print("Step: ",step," | State: ", obs," | Action: ", action)
 	reward += rewards
 	if dones:
 		print("Time [", ctime(time()),"] | Total Steps: ",step ,"Total Reward: ", reward)
