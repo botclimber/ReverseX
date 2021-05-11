@@ -12,6 +12,43 @@ from gym.utils import seeding
 
 import numpy as np
 import random
+import re
+
+
+
+class jss_data():
+
+	def __init__(self, f_name):
+		self.jss_data = open(f_name, 'r').read()
+
+
+	def clean(self):
+
+		data = re.split('\n',self.jss_data)
+		data_cp = data.copy()
+
+		c = 0   
+		for x in range(len(data)):
+			if re.search('#', data_cp[x]) or not data_cp[x]:
+				data.pop(x-c)   
+				c += 1
+		data.pop(0)    
+
+		return data 
+
+	def convert(self):
+		c_data = self.clean()    
+
+		data = {}
+		for x in range(len(c_data)):
+			p_data = c_data[x].split()
+			data['job'+str(x)] = []
+
+			for i in range(0, len(p_data), 2): 
+				data['job'+str(x)].append([int(p_data[i]), int(p_data[i+1])])
+
+		return data
+
 
 '''
 data format:
@@ -40,16 +77,17 @@ reward system:
 
  
 '''
-MAX_INVALID_STEPS = 1e3
 
-JOBS = 3
-MACHINES = 3 
+MAX_INVALID_STEPS = 36 
+
+JOBS = 6
+MACHINES = 6
 
 class RXEnv(gym.Env):
 	
 	def __init__(self):
 		
-		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 3) + 1, ), dtype = np.int64)
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 3), ), dtype = np.int64)
 		self.action_space = spaces.Discrete(JOBS)
 		
 		self.max_invalid_steps = None 
@@ -81,6 +119,7 @@ class RXEnv(gym.Env):
 		return data
 
 
+
 	def ini_state(self ):
 		'''
 		Generate initial state	
@@ -94,7 +133,7 @@ class RXEnv(gym.Env):
 			state.append(self.data['job'+str(y)][0][0])
 			state.append(self.data['job'+str(y)][0][1])
 			state.append(len(self.data['job'+str(y)]))
-		state.append(0)
+		#state.append(0)
 
 		return state
 
@@ -110,12 +149,16 @@ class RXEnv(gym.Env):
 	
 
 	def step(self, action):
-		done = False if self.max_invalid_steps > 0 else True
-	
-		machine_idx = MACHINES+(JOBS*action)	
+		#done = False if self.max_invalid_steps > 0 else True
+		#done = False	
+		
+		done = True
+		reward = 0		
+
+		machine_idx = MACHINES+(3*action)	
 		time_idx = machine_idx+1
 		nr_oprs_idx = machine_idx+2
-
+		
 		job_machine = self.state[machine_idx]
 		job_time = self.state[time_idx]	
 		job_nr_oprs = self.state[nr_oprs_idx]		
@@ -123,14 +166,16 @@ class RXEnv(gym.Env):
 		#Invalid actions:
 		#	- action equal a finalized job
 		
+		'''
 		if job_nr_oprs == 0:
-			reward = -1
-			self.max_invalid_steps -= 1			
-	
+			#reward = -1
+			#self.max_invalid_steps -= 1			
+		
 		else:
-			done = True
-			reward = 1			
-	
+		'''
+		
+		if job_nr_oprs > 0:
+
 			# increment in machine
 			# - check diff time between last opr machine and actual machine.
 			# - make diff between start and end in machine where operation will be processed
@@ -165,9 +210,11 @@ class RXEnv(gym.Env):
 				self.state[time_idx] = 0
 
 			# check absolute time
+			'''
 			abs_time = min(self.state[:3])
 			self.state[-1] = abs_time
-	
+			'''
+
 			# update ps_result
 			# - save progression. It will be the final result scheme
 			# ----	
@@ -176,17 +223,20 @@ class RXEnv(gym.Env):
 			# ----
 
 			# make changes, in the end verify if there is no more operation to be processed in any job, if so send done = True
+			#done = True
 			for x in range(MACHINES+2, len(self.state), 3):
 				if self.state[x] != 0:
 					done = False
 					break	
 			
-			#if done: reward += 10 * (1 / max(self.state[:3]))
-			if done: reward += 1 / max(self.state[:3])
-		
+			#if done: reward += (MACHINES*JOBS) * (1.025 / pow(1.025, max(self.state[:3])))
+			#if done: reward += 1/max(self.state[:3])
+			reward = 1/max(self.state[:3])
+			if done: reward = (MACHINES * JOBS) * (1.025 / pow(1.025, max(self.state[:3])))
 
 		#self.render()
 		self.reward += reward
+		#print("State: ", self.state, " | Action: ", action, " | Reward: ",reward)
 		return self.state, reward, done, {}
 
 
@@ -207,14 +257,17 @@ class RXEnv(gym.Env):
 
 
 
-	def reset(self, in_data = False):
-		#print("Reward: ", self.reward)
+	def reset(self, f_name = False):
+		print("Reward: ", self.reward)
 		self.reward = 0		
-
-		if in_data: self.data = {'job0':[[0,3],[1,2],[2,2]],'job1':[[0,2],[2,1],[1,4]],'job2':[[1,4],[2,3]]}
-		else: self.data = self.seed()
 		
-		#print(self.data," | ", end = " ")
+		
+		#if f_name != False: self.data = jss_data(f_name).convert() 
+		#else: self.data = self.seed()
+				
+		self.data = jss_data("ft06.jss").convert()
+
+		print(self.data," | ", end = " ")
 		# self.static_data = self.data
 			
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
