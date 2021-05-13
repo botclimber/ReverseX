@@ -19,8 +19,8 @@ env = gym.make('RX_env:RX-v1')
 model = A2C(MlpPolicy, env, verbose=1, tensorboard_log="a2c_log/")
 
 stt = timer()
-model.learn(total_timesteps=1000000, tb_log_name="first_x_a2c") 
-model.learn(total_timesteps=1000000, tb_log_name="second_x_a2c", reset_num_timesteps=False) 
+model.learn(total_timesteps=10000, tb_log_name="first_x_a2c") 
+#model.learn(total_timesteps=1000000, tb_log_name="second_x_a2c", reset_num_timesteps=False) 
 end = timer()
 
 #model.save("a2c_x")

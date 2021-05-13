@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from parl.utils import check_version_for_fluid  # requires parl >= 1.4.1
-check_version_for_fluid()
+import os
+os.environ['PARL_BACKEND'] = 'fluid'
 
 import gym
 import numpy as np
+import paddle
 import parl
-from parl.utils import logger
+from parl.utils import logger, check_version_for_xpu
+check_version_for_xpu()
+paddle.enable_static()
 
 from cartpole_model import CartpoleModel
 from cartpole_agent import CartpoleAgent
@@ -57,7 +60,7 @@ def run_episode(agent, env, rpm):
     return total_reward
 
 
-def evaluate(agent, env, render=True):
+def evaluate(agent, env, render=False):
     # test part, run 5 episodes and average
     eval_reward = []
     for i in range(5):
@@ -66,16 +69,16 @@ def evaluate(agent, env, render=True):
         isOver = False
         while not isOver:
             action = agent.predict(obs)
-            obs, reward, isOver, _ = env.step(action)
-            if isOver:
+            if render:
                 env.render()
+            obs, reward, isOver, _ = env.step(action)
             episode_reward += reward
         eval_reward.append(episode_reward)
     return np.mean(eval_reward)
 
 
 def main():
-    env = gym.make('RX_env:RX-v1')
+    env = gym.make('CartPole-v0')
     action_dim = env.action_space.n
     obs_shape = env.observation_space.shape
 
@@ -95,13 +98,13 @@ def main():
     while len(rpm) < MEMORY_WARMUP_SIZE:  # warm up replay memory
         run_episode(agent, env, rpm)
 
-    max_episode = 500000 
+    max_episode = 2000
 
     # start train
     episode = 0
     while episode < max_episode:
         # train part
-        for i in range(0, 500):
+        for i in range(0, 50):
             total_reward = run_episode(agent, env, rpm)
             episode += 1
 
@@ -111,4 +114,8 @@ def main():
 
 
 if __name__ == '__main__':
+    xpu_count = int(os.getenv("FLAGS_selected_xpus", "-1"))
+    if xpu_count < 0:
+        logger.info(
+            'Cannot find available XPU devices, using other devices now.')
     main()

@@ -80,8 +80,8 @@ reward system:
 
 MAX_INVALID_STEPS = 36 
 
-JOBS = 6
-MACHINES = 6
+JOBS = 3
+MACHINES = 3
 
 class RXEnv(gym.Env):
 	
@@ -90,8 +90,11 @@ class RXEnv(gym.Env):
 		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 3), ), dtype = np.int64)
 		self.action_space = spaces.Discrete(JOBS)
 		
+		self.a_step = 0
 		self.max_invalid_steps = None 
 		self.reward = None
+		
+		self.l_time = None		
 
 		self.data = None
 		# self.static_data = None	
@@ -149,11 +152,11 @@ class RXEnv(gym.Env):
 	
 
 	def step(self, action):
+		self.a_step += 1
 		#done = False if self.max_invalid_steps > 0 else True
-		#done = False	
 		
 		done = True
-		reward = 0		
+		reward = 0
 
 		machine_idx = MACHINES+(3*action)	
 		time_idx = machine_idx+1
@@ -165,15 +168,13 @@ class RXEnv(gym.Env):
 
 		#Invalid actions:
 		#	- action equal a finalized job
-		
 		'''
 		if job_nr_oprs == 0:
-			#reward = -1
-			#self.max_invalid_steps -= 1			
+			reward = -1
+			self.max_invalid_steps -= 1			
 		
 		else:
 		'''
-		
 		if job_nr_oprs > 0:
 
 			# increment in machine
@@ -209,12 +210,13 @@ class RXEnv(gym.Env):
 				self.state[machine_idx] = 0
 				self.state[time_idx] = 0
 
+			
 			# check absolute time
 			'''
-			abs_time = min(self.state[:3])
+			abs_time = max(self.state[:MACHINES])
 			self.state[-1] = abs_time
 			'''
-
+			
 			# update ps_result
 			# - save progression. It will be the final result scheme
 			# ----	
@@ -229,14 +231,36 @@ class RXEnv(gym.Env):
 					done = False
 					break	
 			
-			#if done: reward += (MACHINES*JOBS) * (1.025 / pow(1.025, max(self.state[:3])))
-			#if done: reward += 1/max(self.state[:3])
-			reward = 1/max(self.state[:3])
-			if done: reward = (MACHINES * JOBS) * (1.025 / pow(1.025, max(self.state[:3])))
+			#if done: reward += 1/max(self.state[:MACHINES])
+			#reward = 1/max(self.state[:MACHINES])
+			#reward = (self.a_step)/(MACHINES*JOBS)
+			#reward = self.a_step
+			#reward = 1
+			#if done: reward += (JOBS*MACHINES) * (1.025/ pow(1.025, max(self.state[:MACHINES])))
+		
+			#reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))		
+			self.l_time = max(self.state[:MACHINES])
+			
+			reward = self.a_step / (MACHINES*JOBS)
+			
+			if done: 
+				reward += 1.025 / pow(1.025, max(self.state[:MACHINES])) 
+				#reward = 1 / max(self.state[:MACHINES])
+				print("DONE REWARD: ", reward)
+			
+			#else:
+				#reward = 1
+				#reward = pow(0.9, (max(self.state[:MACHINES]) - self.l_time)) 
+				#self.l_time = max(self.state[:MACHINES])
+				
+			#else: reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))  
+			
 
 		#self.render()
 		self.reward += reward
 		#print("State: ", self.state, " | Action: ", action, " | Reward: ",reward)
+		#print("Step ", self.a_step,": reward = ",reward)
+
 		return self.state, reward, done, {}
 
 
@@ -258,21 +282,25 @@ class RXEnv(gym.Env):
 
 
 	def reset(self, f_name = False):
-		print("Reward: ", self.reward)
+		
+		if self.a_step > 0:	
+			print("Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:MACHINES]))
+		
 		self.reward = 0		
+		self.l_time = 0		
 		
-		
-		#if f_name != False: self.data = jss_data(f_name).convert() 
-		#else: self.data = self.seed()
+		if f_name != False: self.data = jss_data(f_name).convert() 
+		else: self.data = self.seed()
 				
-		self.data = jss_data("ft06.jss").convert()
+		#self.data = jss_data("f03.jss").convert()
 
-		print(self.data," | ", end = " ")
+		#print(self.data," | ", end = " ")
 		# self.static_data = self.data
-			
+
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
 		self.ps_result = self.g_machines_interface()		
-	
+		
+		self.a_step = 0
 		self.max_invalid_steps = MAX_INVALID_STEPS		
 	
 		return self.state
