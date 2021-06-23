@@ -1,6 +1,6 @@
 '''
 author: Daniel Silva
-version: v1.21
+version: v1.x
 description: Environment for JSSP Reinforcement learning (RL)
 '''
 
@@ -15,7 +15,7 @@ import random
 import re
 
 
-# upload data from .jss files
+
 class jss_data():
 
 	def __init__(self, f_name):
@@ -78,29 +78,33 @@ reward system:
  
 '''
 
-JOBS = 6 
+# MAX_INVALID_STEPS = 36 
+
+JOBS = 6
 MACHINES = 6
 
 class RXEnv(gym.Env):
 	
 	def __init__(self):
 		
-		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 3) + 1, ), dtype = np.int64)
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 4), ), dtype = np.int64)
 		self.action_space = spaces.Discrete(JOBS)
 		
-		self.a_step = None # count steps and give us the actual one
-		self.reward = None # sum rewards
-
-		self.data = None # data got from jss file
+		self.a_step = 0
+		# self.max_invalid_steps = None 
+		self.reward = None
 		
-		self.state = None # actual state
-		self.ps_result = None # final presentation result
+		#self.l_time = None		
 
+		self.data = None
+		# self.static_data = None	
+		
+		self.state = None
+		self.ps_result = None
 
-	# seed with random data
 	'''
 	def seed(self):
-		# Generate data for training
+		#Generate data for training
 		
 		machines = [x for x in range(MACHINES)]		
 		data = {}
@@ -111,13 +115,31 @@ class RXEnv(gym.Env):
 			while len(data['job'+str(x)]) < 1:
 				random.shuffle(machines)
 				for j in machines:
-					time = random.randrange(0, 10)
+					time = random.randrange(0, 720)
 					if time > 0: data['job'+str(x)].append([ j, time])
 				
 		return data
 	'''
 
-	# get initial state from given data
+	def seed(self):
+		'''
+		Generate data for training
+		'''
+		machines = [x for x in range(MACHINES)]		
+		data = {}
+	
+		for x in range(JOBS):
+			data['job'+str(x)] = []
+		
+			while len(data['job'+str(x)]) < 1:
+				random.shuffle(machines)
+				for j in machines:
+					time = random.randrange(1, 720)
+					data['job'+str(x)].append([ j, time])
+				
+		return data
+
+
 	def ini_state(self ):
 		'''
 		Generate initial state	
@@ -131,12 +153,17 @@ class RXEnv(gym.Env):
 			state.append(self.data['job'+str(y)][0][0])
 			state.append(self.data['job'+str(y)][0][1])
 			state.append(len(self.data['job'+str(y)]))
-		state.append(0)
+
+			sum = 0
+			for i in range(len(self.data['job'+str(y)])):
+				sum += self.data['job'+str(y)][i][1]
+			state.append(sum) # total production time of a specific job
+                
+		#state.append(0)
 
 		return state
 
 
-	# generate dictionary with machines to presentate when episode done
 	def g_machines_interface(self):
 		data = {}
 		for i in range(MACHINES):
@@ -149,19 +176,30 @@ class RXEnv(gym.Env):
 
 	def step(self, action):
 		self.a_step += 1
+		#done = False if self.max_invalid_steps > 0 else True
 		
 		done = True
 		reward = 0
 
-		machine_idx = MACHINES+(3*action)	
+		machine_idx = MACHINES+(4*action)
 		time_idx = machine_idx+1
 		nr_oprs_idx = machine_idx+2
+		tot_prod_time_idx = machine_idx+3
 		
 		job_machine = self.state[machine_idx]
 		job_time = self.state[time_idx]	
-		job_nr_oprs = self.state[nr_oprs_idx]		
+		job_nr_oprs = self.state[nr_oprs_idx]
+		job_tot_prod_time = self.state[tot_prod_time_idx]
 
+		#Invalid actions:
+		#	- action equal a finalized job
+		'''
+		if job_nr_oprs == 0:
+			reward = -1
+			self.max_invalid_steps -= 1			
 		
+		else:
+		'''
 		if job_nr_oprs > 0:
 
 			# increment in machine
@@ -179,11 +217,13 @@ class RXEnv(gym.Env):
 						end_time = str_conv(x, 2)
 
 				if end_time > self.state[job_machine]:
-					diff = end_time - self.state[job_machine] 
-								
-		
+					diff = end_time - self.state[job_machine]
+                
 			self.state[job_machine] += (diff + job_time)	
 			
+			# decrement from tot production time of a specific job
+			self.state[tot_prod_time_idx] -= job_time
+            
 			# decrement opr in state
 			job_nr_oprs -= 1		
 			self.state[nr_oprs_idx] = job_nr_oprs
@@ -200,7 +240,7 @@ class RXEnv(gym.Env):
 			
 			# check absolute time
 			makespan = max(self.state[:MACHINES])
-			self.state[-1] = makespan 
+			#	self.state[-1] = makespan 
 			
 			# update ps_result
 			# - save progression. It will be the final result scheme
@@ -210,19 +250,42 @@ class RXEnv(gym.Env):
 			# ----
 
 			# make changes, in the end verify if there is no more operation to be processed in any job, if so send done = True
+			#done = True
 			for x in range(MACHINES+2, len(self.state), 3):
 				if self.state[x] != 0:
 					done = False
 					break	
 			
+			#if done: reward += 1/max(self.state[:MACHINES])
+			#reward = 1/max(self.state[:MACHINES])
+			#reward = (self.a_step)/(MACHINES*JOBS)
+			#reward = self.a_step
+			#reward = 1
+			#if done: reward += (JOBS*MACHINES) * (1.025/ pow(1.025, max(self.state[:MACHINES])))
+		
+			#reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))		
+			#self.l_time = max(self.state[:MACHINES])
 			
 			reward = self.a_step / (MACHINES*JOBS)
+			
 			if done: 
-				reward += 1.025 / pow(1.025, self.state[-1]) 
-				#print("DONE REWARD: ", reward)
+				reward += 1000 * (1 / makespan)
+				#reward = 1 / max(self.state[:MACHINES])
+				print("DONE REWARD: ", reward)
+			
+			#else:
+				#reward = 1
+				#reward = pow(0.9, (max(self.state[:MACHINES]) - self.l_time)) 
+				#self.l_time = max(self.state[:MACHINES])
+				
+			#else: reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))  
 			
 
+		#self.render()
 		self.reward += reward
+		#print("State: ", self.state, " | Action: ", action, " | Reward: ",reward)
+		#print("Step ", self.a_step,": reward = ",reward)
+
 		return self.state, reward, done, {}
 
 
@@ -249,12 +312,14 @@ class RXEnv(gym.Env):
 			print("Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:MACHINES]))
 		
 		self.reward = 0		
-		self.l_time = 0		
+		#self.l_time = 0		
 		
+		'''
 		if f_name != False: self.data = jss_data(f_name).convert() 
-		else: self.data = jss_data("ft06.jss").convert()
-		
-		#self.data = jss_data("f03.jss").convert()
+		else: self.data = self.seed()
+		'''
+
+		self.data = jss_data("ft06.jss").convert()
 
 		#print(self.data," | ", end = " ")
 		# self.static_data = self.data

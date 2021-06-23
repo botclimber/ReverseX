@@ -15,7 +15,7 @@ env = gym.make('RX_env:RX-v1')
 model = PPO2(MlpPolicy, env, verbose=1, tensorboard_log="ppo2_log/")
 
 stt = timer()
-model.learn(total_timesteps=1000000, tb_log_name="first_x_ppo2") 
+model.learn(total_timesteps=500000, tb_log_name="graph_ft10_v1") 
 #model.learn(total_timesteps=1000000, tb_log_name="second_x_a2c", reset_num_timesteps=False) 
 end = timer()
 
@@ -24,7 +24,7 @@ end = timer()
 #del model # remove to demonstrate saving and loading
 #model = PPO2.load("ppo2_x")
 
-obs = env.reset("f03.jss")
+obs = env.reset("ft10.jss")
 reward = 0 
 step = 0 
 while True:

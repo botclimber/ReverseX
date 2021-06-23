@@ -53,7 +53,7 @@ def load_data():
 	r_size = 0
 	c_size = 0
 	
-	with open('../../data/data.csv', newline='') as csvfile:
+	with open('../../sandbox/jss_to_csv/data/data.csv', newline='') as csvfile:
 		reader = csv.reader(csvfile, delimiter=',') 
 		    
 		for row in reader:
@@ -90,7 +90,8 @@ class RXEnv(gym.Env):
 
 		self.max_invalid_steps = 0 # MAX_INVALID_STEPS 
 		self.max_valid_steps = 0 # num of valid moves/choices (-1 cause 0 counts too)	
-		
+		self.act_step = 0			
+
 		self.state = None
 		self.ps_result = None  # progression state result m(x): ['task_id, start_time, end_time']
 		
@@ -105,8 +106,9 @@ class RXEnv(gym.Env):
 
 
 	def step(self, action):
-		done = True if not self.max_invalid_steps else False
-	
+		#done = True if not self.max_invalid_steps else False
+		reward = 0		
+
 		# get order from time.order
 		g_order = lambda x: round(x - int(x), 3)
 		
@@ -142,10 +144,13 @@ class RXEnv(gym.Env):
 		
 
 		if self.state[cd_row][cd_col] < 1 or seq_error: 
-			self.max_invalid_steps -= 1
-			reward = -1
-		
+			#self.max_invalid_steps -= 1
+			#reward = 0
+			done = True			
+
 		else:
+			done = False
+			self.act_step += 1
 			# make state changes
 			# save progression
 
@@ -193,6 +198,8 @@ class RXEnv(gym.Env):
 			# update self.state
 			self.state[cd_row][cd_col] = g_order(self.state[cd_row][cd_col])
 
+			reward = self.act_step / (self.ROWS*self.COLS) 
+			
 			if not self.max_valid_steps:
 				done = True
 
@@ -203,12 +210,11 @@ class RXEnv(gym.Env):
 					if  time > x:
 						x = time
 				
-				reward = 2e3*(1.025/pow(1.025, x))
+				reward += (1.025/pow(1.025, x))
 
 			else:
 				self.max_valid_steps -= 1
-				reward = 1
-
+		print(reward)
 		return np.array(self.state), reward, done, {}
 
 
@@ -218,6 +224,7 @@ class RXEnv(gym.Env):
 		self.max_valid_steps = np.count_nonzero(self.state > 0) - 1
 		self.max_invalid_steps = MAX_INVALID_STEPS
 		self.ps_result = self.g_machines_interface()
+		self.act_step = 0
 	
 		#print(self.state," \n\n")	
 		return self.state

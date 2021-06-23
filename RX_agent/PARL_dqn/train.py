@@ -20,6 +20,11 @@ import numpy as np
 import parl
 from parl.utils import logger
 
+from time import time, ctime
+
+from timeit import default_timer as timer
+from datetime import timedelta
+
 from cartpole_model import CartpoleModel
 from cartpole_agent import CartpoleAgent
 
@@ -95,15 +100,18 @@ def main():
     while len(rpm) < MEMORY_WARMUP_SIZE:  # warm up replay memory
         run_episode(agent, env, rpm)
 
-    max_episode = 500000 
+    max_episode = 50000 
 
     # start train
     episode = 0
     while episode < max_episode:
         # train part
+        stt = timer()
         for i in range(0, 500):
             total_reward = run_episode(agent, env, rpm)
             episode += 1
+        end = timer()
+        print("Time spent training: ", timedelta(seconds=end-stt))
 
         eval_reward = evaluate(agent, env)
         logger.info('episode:{}    test_reward:{}'.format(

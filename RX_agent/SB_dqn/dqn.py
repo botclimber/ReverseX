@@ -14,17 +14,17 @@ env = gym.make('RX_env:RX-v1')
 model = DQN(MlpPolicy, env, verbose=1, tensorboard_log="dqn_log/")
 
 stt = timer()
-model.learn(total_timesteps=100000, tb_log_name="first_run")
+model.learn(total_timesteps=500000, tb_log_name="graph_ft06_v1")
 #model.learn(total_timesteps=400000, tb_log_name="second_run", reset_num_timesteps=False)
 #model.learn(total_timesteps=500000, tb_log_name="third_run", reset_num_timesteps=False)
 end = timer()
 
-#model.save("dqn_x")
+model.save("dqn_x")
 
 #del model # remove to demonstrate saving and loading
 #model = DQN.load("dqn_x")
 
-obs = env.reset(True)
+obs = env.reset('ft06.jss')
 
 for episode in range(1):
 	
