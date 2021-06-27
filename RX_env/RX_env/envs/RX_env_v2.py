@@ -78,95 +78,85 @@ reward system:
  
 '''
 
-# MAX_INVALID_STEPS = 36 
-
-JOBS = 6
-MACHINES = 6
 
 class RXEnv(gym.Env):
+	JOBS = 6 
+	MACHINES = 6	
+
 	
 	def __init__(self):
 		
-		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(MACHINES + (JOBS * 4), ), dtype = np.int64)
-		self.action_space = spaces.Discrete(JOBS)
+		self.observation_space = spaces.Box(low = 0, high = np.inf, shape=(self.MACHINES + (self.JOBS * 4) + (self.JOBS * self.MACHINES), ), dtype = np.int64)
+		self.action_space = spaces.Discrete(self.JOBS)
 		
-		self.a_step = 0
-		# self.max_invalid_steps = None 
-		self.reward = None
-		
-		#self.l_time = None		
+		self.a_step = 0 # actual step
+		self.reward = None # comulative reward
 
-		self.data = None
-		# self.static_data = None	
-		
-		self.state = None
-		self.ps_result = None
+		self.data = None # data
+		self.state = None # states
+		self.ps_result = None # final result
 
-	'''
+	
+	
+
+	
+	#Generate data for training
 	def seed(self):
-		#Generate data for training
 		
-		machines = [x for x in range(MACHINES)]		
+		machines = [x for x in range(self.MACHINES)]		
 		data = {}
 	
-		for x in range(JOBS):
+		for x in range(self.JOBS):
 			data['job'+str(x)] = []
 		
 			while len(data['job'+str(x)]) < 1:
 				random.shuffle(machines)
 				for j in machines:
-					time = random.randrange(0, 720)
-					if time > 0: data['job'+str(x)].append([ j, time])
-				
-		return data
-	'''
-
-	def seed(self):
-		'''
-		Generate data for training
-		'''
-		machines = [x for x in range(MACHINES)]		
-		data = {}
-	
-		for x in range(JOBS):
-			data['job'+str(x)] = []
-		
-			while len(data['job'+str(x)]) < 1:
-				random.shuffle(machines)
-				for j in machines:
-					time = random.randrange(1, 720)
+					time = random.randrange(1, 150)
 					data['job'+str(x)].append([ j, time])
 				
 		return data
 
 
+
+	
+	# set initial state	
 	def ini_state(self ):
-		'''
-		Generate initial state	
-		'''
+		
 		state = []
 		
-		for x in range(MACHINES):
+		for x in range(self.MACHINES):
 			state.append(0)
 
-		for y in range(JOBS):
-			state.append(self.data['job'+str(y)][0][0])
-			state.append(self.data['job'+str(y)][0][1])
-			state.append(len(self.data['job'+str(y)]))
+		for y in range(self.JOBS):
+			state.append(self.data['job'+str(y)][0][0]) # machine
+			state.append(self.data['job'+str(y)][0][1]) # time
+			state.append(len(self.data['job'+str(y)])) # tasks left
 
 			sum = 0
 			for i in range(len(self.data['job'+str(y)])):
 				sum += self.data['job'+str(y)][i][1]
 			state.append(sum) # total production time of a specific job
                 
-		#state.append(0)
+		# show tasks time in all states	
+		for x in self.data:
+			diff = self.MACHINES - len(self.data[x])
+			
+			for i in self.data[x]:
+				state.append(i[1])	
+					
+			if diff > 0:
+				for i in range(diff):
+					state.append(0)
 
 		return state
 
 
+
+
 	def g_machines_interface(self):
 		data = {}
-		for i in range(MACHINES):
+		for i in range(self.MACHINES):
 			data['m'+str(i)] = ['0,0,0']
 
 		return data
@@ -176,31 +166,34 @@ class RXEnv(gym.Env):
 
 	def step(self, action):
 		self.a_step += 1
-		#done = False if self.max_invalid_steps > 0 else True
 		
 		done = True
 		reward = 0
 
-		machine_idx = MACHINES+(4*action)
-		time_idx = machine_idx+1
-		nr_oprs_idx = machine_idx+2
-		tot_prod_time_idx = machine_idx+3
-		
-		job_machine = self.state[machine_idx]
-		job_time = self.state[time_idx]	
-		job_nr_oprs = self.state[nr_oprs_idx]
-		job_tot_prod_time = self.state[tot_prod_time_idx]
+		machine_idx = self.MACHINES+(4*action) # get machine index where the task will
+		# be processed
 
-		#Invalid actions:
-		#	- action equal a finalized job
-		'''
-		if job_nr_oprs == 0:
-			reward = -1
-			self.max_invalid_steps -= 1			
+		time_idx = machine_idx+1 # get index of occupied machine time from that task
+		nr_oprs_idx = machine_idx+2 # get index of number operations left for that job
+		tot_prod_time_idx = machine_idx+3 # get index of total production time left
 		
-		else:
-		'''
+		job_machine = self.state[machine_idx] # machine value
+		job_time = self.state[time_idx]	# time value
+		job_nr_oprs = self.state[nr_oprs_idx] # number of operations value
+		job_tot_prod_time = self.state[tot_prod_time_idx] # total prod time value
+
+	
+		task_0_idx = (self.MACHINES + (self.JOBS * 4)) + (self.JOBS * action)		
+
+
 		if job_nr_oprs > 0:
+			
+			# change data time in state of task in job
+			for x in range(task_0_idx, (task_0_idx + self.JOBS )):
+				if self.state[x] > 0:
+					self.state[x] = 0
+					break
+
 
 			# increment in machine
 			# - check diff time between last opr machine and actual machine.
@@ -224,10 +217,12 @@ class RXEnv(gym.Env):
 			# decrement from tot production time of a specific job
 			self.state[tot_prod_time_idx] -= job_time
             
+			
 			# decrement opr in state
 			job_nr_oprs -= 1		
 			self.state[nr_oprs_idx] = job_nr_oprs
 				
+			
 			# change next opr in the specified job (mahcine, time)
 			if job_nr_oprs > 0:
 				self.state[machine_idx] = self.data['job'+str(action)][-job_nr_oprs][0]
@@ -239,52 +234,30 @@ class RXEnv(gym.Env):
 
 			
 			# check absolute time
-			makespan = max(self.state[:MACHINES])
-			#	self.state[-1] = makespan 
+			makespan = max(self.state[:self.MACHINES])
+			
 			
 			# update ps_result
 			# - save progression. It will be the final result scheme
 			# ----	
 			self.ps_result['m'+str(job_machine)].append('{}, {}, {}'.format(action, (self.state[job_machine] - job_time), self.state[job_machine]))	
-
 			# ----
 
+			
 			# make changes, in the end verify if there is no more operation to be processed in any job, if so send done = True
-			#done = True
-			for x in range(MACHINES+2, len(self.state), 3):
+			for x in range(self.MACHINES+2, (self.MACHINES + (self.JOBS * 4)), 4):
 				if self.state[x] != 0:
 					done = False
 					break	
-			
-			#if done: reward += 1/max(self.state[:MACHINES])
-			#reward = 1/max(self.state[:MACHINES])
-			#reward = (self.a_step)/(MACHINES*JOBS)
-			#reward = self.a_step
-			#reward = 1
-			#if done: reward += (JOBS*MACHINES) * (1.025/ pow(1.025, max(self.state[:MACHINES])))
-		
-			#reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))		
-			#self.l_time = max(self.state[:MACHINES])
-			
-			reward = self.a_step / (MACHINES*JOBS)
-			
+             
+	
+			reward = self.a_step / (self.MACHINES*self.JOBS)
 			if done: 
-				reward += 1000 * (1 / makespan)
-				#reward = 1 / max(self.state[:MACHINES])
-				print("DONE REWARD: ", reward)
+				reward += 1000 * (1.025 / pow(1.025, makespan)) 
+				#print("DONE REWARD: ", reward)
 			
-			#else:
-				#reward = 1
-				#reward = pow(0.9, (max(self.state[:MACHINES]) - self.l_time)) 
-				#self.l_time = max(self.state[:MACHINES])
-				
-			#else: reward = pow(0.9, (max(self.state[:MACHINES])-self.l_time))  
 			
-
-		#self.render()
 		self.reward += reward
-		#print("State: ", self.state, " | Action: ", action, " | Reward: ",reward)
-		#print("Step ", self.a_step,": reward = ",reward)
 
 		return self.state, reward, done, {}
 
@@ -297,7 +270,7 @@ class RXEnv(gym.Env):
 		print(self.data)
 		print("\n")		
 
-		for i in range(MACHINES):
+		for i in range(self.MACHINES):
 			print('Machine ', i,' :', end = " " )
 			for j in range(1, len(self.ps_result['m'+str(i)])):
 				print("[", self.ps_result['m'+str(i)][j], "]", end = " ")
@@ -307,31 +280,24 @@ class RXEnv(gym.Env):
 
 
 	def reset(self, f_name = False):
-		
-		if self.a_step > 0:	
-			print("Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:MACHINES]))
-		
-		self.reward = 0		
-		#self.l_time = 0		
-		
-		'''
-		if f_name != False: self.data = jss_data(f_name).convert() 
+
+		if self.a_step > 0:
+			print("\n\n Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:self.MACHINES]))
+
+
+		if f_name != False: self.data = jss_data(f_name).convert()
+		#else: self.data = jss_data("f03_test.jss").convert()
 		else: self.data = self.seed()
-		'''
-
-		self.data = jss_data("ft06.jss").convert()
-
-		#print(self.data," | ", end = " ")
-		# self.static_data = self.data
 
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
-		self.ps_result = self.g_machines_interface()		
+		self.ps_result = self.g_machines_interface()
 		
 		self.a_step = 0
-		# self.max_invalid_steps = MAX_INVALID_STEPS		
-	
-		return self.state
-	
+		self.reward = 0
+		
+		return self.state	
+
+
 
 	def close(self):
 		pass

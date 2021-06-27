@@ -198,15 +198,10 @@ class RXEnv(gym.Env):
 				self.state[time_idx] = 0
 
 			
-			# check absolute time
-			makespan = max(self.state[:MACHINES])
-			self.state[-1] = makespan 
-			
 			# update ps_result
 			# - save progression. It will be the final result scheme
 			# ----	
 			self.ps_result['m'+str(job_machine)].append('{}, {}, {}'.format(action, (self.state[job_machine] - job_time), self.state[job_machine]))	
-
 			# ----
 
 			# make changes, in the end verify if there is no more operation to be processed in any job, if so send done = True
