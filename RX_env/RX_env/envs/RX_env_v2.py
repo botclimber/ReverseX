@@ -281,13 +281,13 @@ class RXEnv(gym.Env):
 
 	def reset(self, f_name = False):
 
-		if self.a_step > 0:
-			print("\n\n Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:self.MACHINES]))
+		#if self.a_step > 0:
+		#	print("\n\n Last State: ",self.state," | Steps: ",self.a_step," | Reward: ", self.reward, " | Makespan: ",max(self.state[:self.MACHINES]))
 
 
 		if f_name != False: self.data = jss_data(f_name).convert()
-		#else: self.data = jss_data("f03_test.jss").convert()
-		else: self.data = self.seed()
+		else: self.data = jss_data("data/ft06.jss").convert()
+		#else: self.data = self.seed()
 
 		self.state = np.array( self.ini_state() ,dtype = np.int64)
 		self.ps_result = self.g_machines_interface()
